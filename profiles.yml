@@ -1,0 +1,7 @@
+ainara:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: 'ainara.duckdb'
+      threads: 4

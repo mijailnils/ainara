@@ -1,0 +1,37 @@
+# ===================
+# DATOS SENSIBLES - NO SUBIR
+# ===================
+raw_data/
+*.duckdb
+*.duckdb.wal
+marts_output/*.xlsx
+
+# ===================
+# dbt artifacts
+# ===================
+target/
+dbt_packages/
+logs/
+package-lock.yml
+.user.yml
+
+# ===================
+# Python
+# ===================
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# ===================
+# IDE
+# ===================
+.idea/
+.vscode/
+*.swp
+
+# ===================
+# OS
+# ===================
+.DS_Store
+Thumbs.db

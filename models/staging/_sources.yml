@@ -1,0 +1,137 @@
+version: 2
+
+sources:
+  - name: ainara_raw
+    description: "Datos crudos de la base de datos de producción de Ainara Helados"
+    database: ainara
+    schema: raw
+    tables:
+      - name: pedidos
+        description: "Pedidos realizados por clientes"
+        columns:
+          - name: codigo
+            description: "ID único del pedido"
+          - name: cliente
+            description: "FK a clientes"
+          - name: tipo_retiro
+            description: "Tipo de retiro: local, delivery, mostrador"
+          - name: tipo_pago
+            description: "Método de pago: cash, mp, transfer, qr, iudu, posnet, cash_alianza"
+          - name: total
+            description: "Total del pedido"
+          - name: estado
+            description: "Estado del pedido"
+          - name: fecha_sys
+            description: "Timestamp Unix de creación"
+
+      - name: pedidos_productos
+        description: "Productos incluidos en cada pedido"
+        columns:
+          - name: codigo
+            description: "ID único"
+          - name: id_pedido
+            description: "FK a pedidos"
+          - name: id_producto
+            description: "FK a productos"
+
+      - name: pedidos_productos_sabores
+        description: "Sabores elegidos para cada producto del pedido"
+        columns:
+          - name: codigo
+            description: "ID único"
+          - name: id_pedido_producto
+            description: "FK a pedidos_productos"
+          - name: sabor
+            description: "FK a sabores"
+
+      - name: clientes
+        description: "Clientes registrados"
+        columns:
+          - name: codigo
+            description: "ID único del cliente"
+          - name: nombre
+            description: "Nombre del cliente"
+          - name: email
+            description: "Email del cliente"
+          - name: telefono
+            description: "Teléfono del cliente"
+
+      - name: clientes_direcciones
+        description: "Direcciones de entrega de clientes"
+        columns:
+          - name: codigo
+            description: "ID único"
+          - name: cliente
+            description: "FK a clientes"
+          - name: direccion
+            description: "Dirección de entrega"
+          - name: barrio
+            description: "Barrio"
+          - name: zona
+            description: "FK a zonas"
+
+      - name: productos
+        description: "Catálogo de productos"
+        columns:
+          - name: codigo
+            description: "ID único del producto"
+          - name: categoria
+            description: "FK a productos_categorias"
+          - name: nombre
+            description: "Nombre del producto"
+          - name: precio
+            description: "Precio base"
+          - name: gustos
+            description: "Cantidad de gustos/sabores permitidos"
+
+      - name: productos_categorias
+        description: "Categorías de productos"
+        columns:
+          - name: codigo
+            description: "ID único"
+          - name: nombre
+            description: "Nombre de la categoría"
+
+      - name: sabores
+        description: "Catálogo de sabores de helado"
+        columns:
+          - name: codigo
+            description: "ID único del sabor"
+          - name: categoria
+            description: "FK a sabores_categorias"
+          - name: nombre
+            description: "Nombre del sabor"
+          - name: sinazucar
+            description: "Flag si es sin azúcar"
+
+      - name: sabores_categorias
+        description: "Categorías de sabores"
+        columns:
+          - name: codigo
+            description: "ID único"
+          - name: nombre
+            description: "Nombre de la categoría"
+
+      - name: delivery
+        description: "Registros de entregas/repartos"
+        columns:
+          - name: codigo
+            description: "ID único"
+          - name: pedidos
+            description: "Lista de pedidos del reparto"
+          - name: repartidor
+            description: "Nombre del repartidor"
+          - name: total
+            description: "Total del reparto"
+
+      - name: zonas
+        description: "Zonas de delivery con precios"
+        columns:
+          - name: codigo
+            description: "ID único"
+          - name: distancia
+            description: "Distancia en km"
+          - name: precio
+            description: "Precio del envío"
+          - name: demora
+            description: "Demora estimada en minutos"

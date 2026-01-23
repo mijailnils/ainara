@@ -1,0 +1,2 @@
+# Este archivo mantiene la carpeta en git
+# Los archivos .xlsx se generan con: python scripts/export_marts.py

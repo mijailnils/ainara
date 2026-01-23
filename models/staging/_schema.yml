@@ -1,0 +1,113 @@
+version: 2
+
+models:
+  - name: stg_pedidos
+    description: "Pedidos limpiados y renombrados"
+    columns:
+      - name: pedido_id
+        description: "ID único del pedido"
+        tests:
+          - unique
+          - not_null
+      - name: cliente_id
+        description: "FK a clientes"
+      - name: tipo_retiro
+        description: "local, delivery, mostrador"
+      - name: tipo_pago
+        description: "cash, mp, transfer, qr, iudu, posnet, cash_alianza"
+      - name: total
+        description: "Monto total del pedido"
+
+  - name: stg_pedidos_productos
+    description: "Líneas de productos por pedido"
+    columns:
+      - name: pedido_producto_id
+        description: "ID único"
+        tests:
+          - unique
+          - not_null
+      - name: pedido_id
+        description: "FK a pedidos"
+      - name: producto_id
+        description: "FK a productos"
+
+  - name: stg_pedidos_productos_sabores
+    description: "Sabores seleccionados por línea de producto"
+    columns:
+      - name: pedido_producto_sabor_id
+        description: "ID único"
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_clientes
+    description: "Clientes registrados"
+    columns:
+      - name: cliente_id
+        description: "ID único del cliente"
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_clientes_direcciones
+    description: "Direcciones de entrega"
+    columns:
+      - name: direccion_id
+        description: "ID único"
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_productos
+    description: "Catálogo de productos"
+    columns:
+      - name: producto_id
+        description: "ID único del producto"
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_productos_categorias
+    description: "Categorías de productos"
+    columns:
+      - name: categoria_id
+        description: "ID único"
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_sabores
+    description: "Catálogo de sabores"
+    columns:
+      - name: sabor_id
+        description: "ID único"
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_sabores_categorias
+    description: "Categorías de sabores"
+    columns:
+      - name: categoria_id
+        description: "ID único"
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_delivery
+    description: "Registros de entregas"
+    columns:
+      - name: delivery_id
+        description: "ID único"
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_zonas
+    description: "Zonas de delivery"
+    columns:
+      - name: zona_id
+        description: "ID único"
+        tests:
+          - unique
+          - not_null
