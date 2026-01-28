@@ -116,4 +116,4 @@ left join direcciones d on p.direccion_id = d.direccion_id
 left join zonas z on d.zona_id = z.zona_id
 left join productos_por_pedido pp on p.pedido_id = pp.pedido_id
 left join sabores_por_pedido sp on p.pedido_id = sp.pedido_id
-where p.is_activo = 1
+--where p.is_activo = 1

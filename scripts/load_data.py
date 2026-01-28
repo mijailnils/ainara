@@ -86,19 +86,62 @@ def create_duckdb_table(conn, table_name, columns_sql):
         return False
 
 def load_inserts(conn, sql_content, table_name):
-    pattern = rf"INSERT INTO `{table_name}` \(([^)]+)\) VALUES\s*(.*?);"
+    """Carga TODOS los INSERTs para una tabla"""
+    # Buscar todos los INSERT INTO `table` ... VALUES ...;
+    # Usar finditer para encontrar todos los bloques
+    pattern = rf"INSERT INTO `{table_name}` \(([^)]+)\) VALUES\s*"
+    
     rows_loaded = 0
-    for match in re.finditer(pattern, sql_content, re.DOTALL | re.IGNORECASE):
+    errors = 0
+    
+    # Encontrar todas las posiciones donde empieza un INSERT
+    for match in re.finditer(pattern, sql_content, re.IGNORECASE):
         columns = match.group(1).replace('`', '"')
-        values_block = match.group(2)
+        start_pos = match.end()
+        
+        # Buscar el final del INSERT (el ;)
+        # Tenemos que manejar los paréntesis anidados en los VALUES
+        paren_depth = 0
+        end_pos = start_pos
+        in_string = False
+        escape_next = False
+        
+        for i, char in enumerate(sql_content[start_pos:], start_pos):
+            if escape_next:
+                escape_next = False
+                continue
+            if char == '\\':
+                escape_next = True
+                continue
+            if char == "'" and not in_string:
+                in_string = True
+            elif char == "'" and in_string:
+                in_string = False
+            elif not in_string:
+                if char == '(':
+                    paren_depth += 1
+                elif char == ')':
+                    paren_depth -= 1
+                elif char == ';' and paren_depth == 0:
+                    end_pos = i
+                    break
+        
+        values_block = sql_content[start_pos:end_pos]
+        
+        if not values_block.strip():
+            continue
+            
         insert_sql = f'INSERT INTO raw."{table_name}" ({columns}) VALUES {values_block}'
+        
         try:
             conn.execute(insert_sql)
             rows_loaded += values_block.count('),(') + 1
         except Exception as e:
-            if rows_loaded == 0:
-                print(f"    ⚠️  Error en INSERT: {str(e)[:80]}")
-    return rows_loaded
+            errors += 1
+            if errors <= 3:  # Solo mostrar primeros 3 errores
+                print(f"    ⚠️  Error INSERT #{errors}: {str(e)[:60]}")
+    
+    return rows_loaded, errors
 
 def load_table(conn, sql_content, table_name):
     print(f"  Cargando {table_name}...")
@@ -108,9 +151,19 @@ def load_table(conn, sql_content, table_name):
         return False
     if not create_duckdb_table(conn, table_name, columns_sql):
         return False
-    load_inserts(conn, sql_content, table_name)
+    
+    rows, errors = load_inserts(conn, sql_content, table_name)
+    
     actual_rows = conn.execute(f'SELECT COUNT(*) FROM raw."{table_name}"').fetchone()[0]
-    print(f"    ✅ {actual_rows:,} filas" if actual_rows > 0 else "    ⚠️  Sin datos")
+    
+    if actual_rows > 0:
+        msg = f"    ✅ {actual_rows:,} filas"
+        if errors > 0:
+            msg += f" ({errors} bloques con error)"
+        print(msg)
+    else:
+        print(f"    ⚠️  Sin datos")
+    
     return True
 
 def main():
@@ -127,6 +180,12 @@ def main():
     print(f"📊 Tamaño: {len(sql_content)/1024/1024:.1f} MB")
     db_path = Path(__file__).parent.parent / 'ainara.duckdb'
     print(f"🦆 DuckDB: {db_path}")
+    
+    # Eliminar DB existente para empezar limpio
+    if db_path.exists():
+        db_path.unlink()
+        print("🗑️  DB anterior eliminada")
+    
     conn = duckdb.connect(str(db_path))
     conn.execute("CREATE SCHEMA IF NOT EXISTS raw")
     print("\n🔄 Cargando...")
