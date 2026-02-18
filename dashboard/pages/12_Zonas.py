@@ -1,0 +1,74 @@
+import sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
+import pandas as pd
+import plotly.express as px
+import streamlit as st
+from app import load_zonas
+from theme import apply_theme, styled_fig, COLORS, TEAL, DARK_BLUE
+from components import kpi_row, fmt_ars, fmt_usd, fmt_pct
+
+st.set_page_config(page_title="Zonas - Ainara", page_icon="\U0001f366", layout="wide")
+apply_theme()
+st.title("Zonas de Delivery")
+
+# ── Load data ─────────────────────────────────────────────────────────────────
+df = load_zonas()
+df["zona_label"] = "Zona " + df["zona_id"].astype(str)
+
+# ── Bar chart: total_pedidos by zona ─────────────────────────────────────────
+st.subheader("Pedidos por Zona")
+
+fig_pedidos = px.bar(
+    df.sort_values("total_pedidos", ascending=False),
+    x="zona_label", y="total_pedidos",
+    color="zona_label", color_discrete_sequence=COLORS,
+    labels={"zona_label": "Zona", "total_pedidos": "Total Pedidos"},
+)
+fig_pedidos.update_layout(showlegend=False)
+styled_fig(fig_pedidos, "Pedidos por Zona")
+st.plotly_chart(fig_pedidos, use_container_width=True)
+
+st.divider()
+
+# ── Bar chart: venta_total by zona ───────────────────────────────────────────
+st.subheader("Ventas por Zona")
+
+fig_ventas = px.bar(
+    df.sort_values("venta_total", ascending=False),
+    x="zona_label", y="venta_total",
+    color="zona_label", color_discrete_sequence=COLORS,
+    labels={"zona_label": "Zona", "venta_total": "Venta Total ($)"},
+)
+fig_ventas.update_layout(showlegend=False)
+styled_fig(fig_ventas, "Ventas por Zona")
+st.plotly_chart(fig_ventas, use_container_width=True)
+
+st.divider()
+
+# ── Metrics table ────────────────────────────────────────────────────────────
+st.subheader("Metricas por Zona")
+
+metrics_cols = [
+    "zona_label", "total_pedidos", "total_clientes", "venta_total",
+    "ticket_promedio", "demora_promedio_real", "distancia_promedio_real",
+    "precio_envio", "pct_pedidos_total",
+]
+available_cols = [c for c in metrics_cols if c in df.columns]
+
+st.dataframe(
+    df[available_cols].sort_values("total_pedidos", ascending=False),
+    use_container_width=True,
+    hide_index=True,
+)
+
+st.divider()
+
+# ── Full data table ──────────────────────────────────────────────────────────
+st.subheader("Tabla Completa de Zonas")
+
+st.dataframe(
+    df.sort_values("total_pedidos", ascending=False),
+    use_container_width=True,
+    hide_index=True,
+)
