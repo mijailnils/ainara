@@ -9,11 +9,12 @@
 -- ════════════════════════════════════════════════════════════════════════════
 
 select
+    cliente_id_mail_phone,
     cliente_id,
-    id_mail,
     nombre,
     email,
     tipo_cliente,
+    tipo_identidad,
     barrio,
 
     -- Raw RFM values

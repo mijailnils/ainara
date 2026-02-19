@@ -18,13 +18,16 @@ buyers = df[df["total_pedidos"] > 0].copy()
 
 # ── KPIs ──────────────────────────────────────────────────────────────────────
 total_con_compras = len(buyers)
-avg_ticket = buyers["ticket_promedio"].mean() if len(buyers) > 0 else 0
-avg_kg = buyers["kg_total"].mean() if len(buyers) > 0 else 0
+total_pedidos = int(buyers["total_pedidos"].sum())
+total_kg = buyers["kg_total"].sum()
+total_gastado = buyers["total_gastado"].sum()
+total_gastado_usd = buyers["total_gastado_usd"].sum() if "total_gastado_usd" in buyers.columns else 0
 
 kpi_row([
-    ("Clientes con Compras", f"{total_con_compras:,}"),
-    ("Ticket Promedio", fmt_ars(avg_ticket)),
-    ("KG Promedio", f"{avg_kg:,.1f} kg"),
+    ("Pedidos (Q)", f"{total_pedidos:,}"),
+    ("KG", f"{total_kg:,.0f}"),
+    ("Total Gastado ($)", fmt_ars(total_gastado)),
+    ("Total Gastado (USD)", fmt_usd(total_gastado_usd)),
 ])
 
 st.divider()
@@ -110,7 +113,7 @@ if search:
 
 display_cols = [
     "cliente_id", "nombre", "email", "barrio", "total_pedidos",
-    "total_gastado", "ticket_promedio", "kg_total",
+    "total_gastado", "total_gastado_usd", "ticket_promedio", "kg_total",
     "dias_desde_ultimo_pedido", "segmento_cliente",
     "tipo_retiro_preferido", "tipo_pago_preferido",
 ]

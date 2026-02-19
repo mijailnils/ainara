@@ -18,6 +18,21 @@ df = load_clientes_nuevos()
 df["mes"] = pd.to_datetime(df["mes"])
 df = df.sort_values("mes")
 
+# ── KPIs ──────────────────────────────────────────────────────────────────────
+total_nuevos = int(df["clientes_nuevos"].sum())
+ticket_prom = df["ticket_promedio_primer_pedido"].mean() if "ticket_promedio_primer_pedido" in df.columns else 0
+ret_30d_avg = df["retencion_30d_pct"].mean() if "retencion_30d_pct" in df.columns else 0
+ret_90d_avg = df["retencion_90d_pct"].mean() if "retencion_90d_pct" in df.columns else 0
+
+kpi_row([
+    ("Clientes Nuevos (Q)", f"{total_nuevos:,}"),
+    ("Ticket 1er Pedido ($)", fmt_ars(ticket_prom)),
+    ("Retencion 30d Prom.", fmt_pct(ret_30d_avg)),
+    ("Retencion 90d Prom.", fmt_pct(ret_90d_avg)),
+])
+
+st.divider()
+
 # ── Line chart: clientes_nuevos over time ─────────────────────────────────────
 st.subheader("Adquisicion de Clientes Nuevos")
 

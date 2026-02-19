@@ -17,7 +17,9 @@ renamed as (
         
         -- Tipo de pedido
         tipo_retiro,
+        case when lower(tipo_retiro) like '%delivery%' then 1 else 0 end as is_delivery,
         tipo_pago,
+        case when lower(tipo_pago)  = 'cash' then 1 else 0 end as is_cash,
         
         -- Mercado Pago
         mp_ID as mercadopago_id,

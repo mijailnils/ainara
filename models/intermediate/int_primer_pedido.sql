@@ -5,8 +5,8 @@
 }}
 
 -- ════════════════════════════════════════════════════════════════════════════
--- int_primer_pedido: identifica el primer pedido por identidad (id_mail)
--- Usa dedup por email para que clientes con múltiples IDs compartan historial
+-- int_primer_pedido: identifica el primer pedido por identidad
+-- Usa cliente_id_mail_phone de dim_mails como clave de identidad
 -- ════════════════════════════════════════════════════════════════════════════
 
 with pedidos as (
@@ -18,31 +18,32 @@ with pedidos as (
     where estado_id != 4  -- excluir cancelados
 ),
 
--- Mapear cliente_id → id_mail (dedup por email)
-clientes_dedup as (
+-- Mapear cliente_id → cliente_id_mail_phone
+identidades as (
     select
         cliente_id,
-        id_mail
-    from {{ ref('int_clientes') }}
+        cliente_id_mail_phone
+    from {{ ref('dim_mails') }}
 ),
 
 pedidos_con_identidad as (
     select
         p.pedido_id,
         p.cliente_id,
-        coalesce(c.id_mail, p.cliente_id * -1) as identidad,
+        i.cliente_id_mail_phone,
         p.created_at,
         row_number() over (
-            partition by coalesce(c.id_mail, p.cliente_id * -1)
+            partition by i.cliente_id_mail_phone
             order by p.created_at, p.pedido_id
         ) as rn
     from pedidos p
-    left join clientes_dedup c on p.cliente_id = c.cliente_id
+    left join identidades i on p.cliente_id = i.cliente_id
+    where i.cliente_id_mail_phone is not null
 ),
 
 primer_fechas as (
     select
-        identidad,
+        cliente_id_mail_phone,
         created_at as fecha_primer_pedido
     from pedidos_con_identidad
     where rn = 1
@@ -51,8 +52,8 @@ primer_fechas as (
 select
     pc.pedido_id,
     pc.cliente_id,
-    pc.identidad,
+    pc.cliente_id_mail_phone,
     case when pc.rn = 1 then true else false end as is_primer_pedido,
     pf.fecha_primer_pedido
 from pedidos_con_identidad pc
-inner join primer_fechas pf on pc.identidad = pf.identidad
+inner join primer_fechas pf on pc.cliente_id_mail_phone = pf.cliente_id_mail_phone

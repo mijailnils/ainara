@@ -18,6 +18,21 @@ df = load_pnl()
 df["mes"] = pd.to_datetime(df["mes"])
 df = df.sort_values("mes")
 
+# ── KPIs ──────────────────────────────────────────────────────────────────────
+total_pedidos = int(df["pedidos_totales"].sum()) if "pedidos_totales" in df.columns else 0
+total_kg = df["kg_totales"].sum() if "kg_totales" in df.columns else 0
+total_ingresos = df["ingresos_totales"].sum()
+total_ingresos_usd = df["ingresos_totales_usd"].sum() if "ingresos_totales_usd" in df.columns else 0
+
+kpi_row([
+    ("Pedidos (Q)", f"{total_pedidos:,}"),
+    ("KG", f"{total_kg:,.0f}"),
+    ("Ingresos ($)", fmt_ars(total_ingresos)),
+    ("Ingresos (USD)", fmt_usd(total_ingresos_usd)),
+])
+
+st.divider()
+
 # ── Waterfall chart: latest month ─────────────────────────────────────────────
 st.subheader("Waterfall - Ultimo Mes")
 

@@ -15,6 +15,19 @@ st.title("Productos")
 # ── Load data ─────────────────────────────────────────────────────────────────
 df = load_productos()
 
+# ── KPIs ──────────────────────────────────────────────────────────────────────
+total_products = len(df)
+total_vendido = int(df["veces_vendido"].sum())
+total_ingreso = df["ingreso_estimado"].sum() if "ingreso_estimado" in df.columns else 0
+
+kpi_row([
+    ("Productos", f"{total_products:,}"),
+    ("Unidades Vendidas (Q)", f"{total_vendido:,}"),
+    ("Ingreso Estimado ($)", fmt_ars(total_ingreso)),
+])
+
+st.divider()
+
 # ── Horizontal bar chart: veces_vendido top 20 ───────────────────────────────
 st.subheader("Top 20 Productos por Unidades Vendidas")
 

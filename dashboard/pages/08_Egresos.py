@@ -25,6 +25,17 @@ if sel_year != "Todos":
 else:
     filtered = df.copy()
 
+# ── KPIs ──────────────────────────────────────────────────────────────────────
+total_monto = filtered["monto_total"].sum()
+total_monto_usd = filtered["monto_total_usd"].sum() if "monto_total_usd" in filtered.columns else 0
+total_cantidad = int(filtered["cantidad_egresos"].sum())
+
+kpi_row([
+    ("Total Egresos ($)", fmt_ars(total_monto)),
+    ("Total Egresos (USD)", fmt_usd(total_monto_usd)),
+    ("Cantidad de Egresos", f"{total_cantidad:,}"),
+])
+
 st.divider()
 
 # ── Treemap: monto_total by categoria ─────────────────────────────────────────

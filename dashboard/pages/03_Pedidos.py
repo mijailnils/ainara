@@ -45,15 +45,15 @@ filtered = df[mask].copy()
 
 # ── KPIs ──────────────────────────────────────────────────────────────────────
 total_pedidos = len(filtered)
+total_kg = filtered["kg_total"].sum() if "kg_total" in filtered.columns else 0
 total_ventas = filtered["total"].sum()
-ticket_prom = filtered["total"].mean() if total_pedidos > 0 else 0
-clientes_unicos = filtered["cliente_id"].nunique()
+total_ventas_usd = filtered["total_usd"].sum() if "total_usd" in filtered.columns else 0
 
 kpi_row([
-    ("Pedidos", f"{total_pedidos:,}"),
-    ("Ventas", fmt_ars(total_ventas)),
-    ("Ticket Promedio", fmt_ars(ticket_prom)),
-    ("Clientes Unicos", f"{clientes_unicos:,}"),
+    ("Pedidos (Q)", f"{total_pedidos:,}"),
+    ("KG", f"{total_kg:,.0f}"),
+    ("Ventas ($)", fmt_ars(total_ventas)),
+    ("Ventas (USD)", fmt_usd(total_ventas_usd)),
 ])
 
 st.divider()
@@ -102,8 +102,8 @@ st.subheader("Tabla de Pedidos")
 
 show_cols = [
     "pedido_id", "fecha", "cliente_nombre", "barrio", "tipo_retiro",
-    "tipo_pago", "subtotal", "descuento", "costo_envio", "total",
-    "estado_nombre", "hora", "horario", "cantidad_productos",
+    "tipo_pago", "subtotal", "descuento", "costo_envio", "total", "total_usd",
+    "kg_total", "estado_nombre", "hora", "horario", "cantidad_productos",
 ]
 available_cols = [c for c in show_cols if c in filtered.columns]
 

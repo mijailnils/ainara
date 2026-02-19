@@ -8,6 +8,14 @@ with clientes as (
     select * from {{ ref('stg_clientes') }}
 ),
 
+-- ── identidad desde dim_mails (fuente única) ─────────────────────────────────
+mails as (
+    select
+        cliente_id,
+        cliente_id_mail_phone
+    from {{ ref('dim_mails') }}
+),
+
 direcciones as (
     select * from {{ ref('stg_clientes_direcciones') }}
 ),
@@ -54,44 +62,35 @@ zona_metricas as (
     group by d.cliente_id
 ),
 
--- ── ID de mail: un ID único por cada email distinto ──────────────────────────
-emails_unicos as (
+-- ── Dedup por identidad: rankear cliente_ids dentro de cada identidad ────────
+clientes_por_identidad as (
     select
-        email,
-        row_number() over (order by email) as id_mail
-    from clientes
-    where email is not null and email != ''
-    group by email
-),
-
--- ── Clientes por email: rankear para detectar duplicados ─────────────────────
-clientes_por_email as (
-    select
-        c.cliente_id,
-        c.email,
+        m.cliente_id_mail_phone,
+        m.cliente_id,
         row_number() over (
-            partition by c.email
-            order by c.created_at desc, c.cliente_id desc
-        ) as rn_email,
-        count(*) over (partition by c.email) as total_clientes_email
-    from clientes c
-    where c.email is not null and c.email != ''
+            partition by m.cliente_id_mail_phone
+            order by c.created_at desc, m.cliente_id desc
+        ) as rn_identidad,
+        count(*) over (partition by m.cliente_id_mail_phone) as total_clientes_identidad
+    from mails m
+    inner join clientes c on m.cliente_id = c.cliente_id
+    where m.cliente_id_mail_phone is not null
 ),
 
--- ── Lista de cliente_ids anteriores por email ────────────────────────────────
-anteriores_por_email as (
+-- ── Lista de cliente_ids anteriores por identidad ────────────────────────────
+anteriores_por_identidad as (
     select
-        email,
+        cliente_id_mail_phone,
         string_agg(cast(cliente_id as varchar), ', ' order by cliente_id) as cliente_ids_anteriores
-    from clientes_por_email
-    where rn_email > 1
-    group by email
+    from clientes_por_identidad
+    where rn_identidad > 1
+    group by cliente_id_mail_phone
 )
 
 select
     -- Datos del cliente
     c.cliente_id,
-    em.id_mail,
+    m.cliente_id_mail_phone,
     c.nombre,
     c.email,
     c.telefono,
@@ -105,18 +104,18 @@ select
     ud.barrio as ultimo_barrio,
     da.barrio as barrio_anterior,
 
-    -- Cantidad de cliente_ids asociados a este email
-    coalesce(ce.total_clientes_email, 0) as total_clientes_email,
+    -- Cantidad de cliente_ids asociados a esta identidad
+    coalesce(ci.total_clientes_identidad, 0) as total_clientes_identidad,
 
-    -- Es el ultimo cliente_id de este email? (1 = si, 0 = no)
+    -- Es el ultimo cliente_id de esta identidad? (1 = si, 0 = no)
     case
-        when ce.rn_email = 1 then 1
-        when ce.rn_email is null then 1  -- sin email = es único
+        when ci.rn_identidad = 1 then 1
+        when ci.rn_identidad is null then 1  -- sin identidad = es único
         else 0
-    end as is_ultimo_cliente_email,
+    end as is_ultimo_cliente_identidad,
 
-    -- IDs anteriores de este email (solo si hay duplicados)
-    ae.cliente_ids_anteriores as email_cliente_ids_anteriores,
+    -- IDs anteriores de esta identidad (solo si hay duplicados)
+    ai.cliente_ids_anteriores,
 
     -- Última dirección
     ud.direccion_id as direccion_ultima_id,
@@ -144,13 +143,13 @@ select
     zm.distancia_max_km_avg
 
 from clientes c
-left join emails_unicos em
-    on c.email = em.email
-left join clientes_por_email ce
-    on c.cliente_id = ce.cliente_id
-left join anteriores_por_email ae
-    on c.email = ae.email
-    and ce.rn_email = 1  -- solo mostrar anteriores en el registro más reciente
+left join mails m
+    on c.cliente_id = m.cliente_id
+left join clientes_por_identidad ci
+    on c.cliente_id = ci.cliente_id
+left join anteriores_por_identidad ai
+    on m.cliente_id_mail_phone = ai.cliente_id_mail_phone
+    and ci.rn_identidad = 1  -- solo mostrar anteriores en el registro más reciente
 left join ultima_direccion ud
     on c.cliente_id = ud.cliente_id
 left join direccion_anterior da

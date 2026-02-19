@@ -12,19 +12,23 @@ clima as (
     select * from {{ ref('int_clima') }}
 ),
 
--- Un registro por cliente (el más reciente) con id_mail y ultimo_barrio
+-- Un registro por cliente (el más reciente) con cliente_id_mail_phone y ultimo_barrio
 clientes_dedup as (
     select distinct on (cliente_id)
         cliente_id,
-        id_mail,
+        cliente_id_mail_phone,
         ultimo_barrio
     from {{ ref('int_clientes') }}
     order by cliente_id, created_at desc
 ),
 
+-- Segmento via dim_mails → dim_clientes (dim_clientes es 1 fila por identidad)
 segmentos as (
-    select cliente_id, segmento_cliente
-    from {{ ref('dim_clientes') }}
+    select m.cliente_id, dc.segmento_cliente
+    from {{ ref('dim_mails') }} m
+    inner join {{ ref('dim_clientes') }} dc
+        on m.cliente_id_mail_phone = dc.cliente_id_mail_phone
+    where m.cliente_id_mail_phone is not null
 ),
 
 -- zona_id y distancia por dirección
@@ -45,7 +49,7 @@ select
     -- ── Pedido ────────────────────────────────────────────────────────────────
     p.pedido_id,
     p.cliente_id,
-    ci.id_mail,
+    ci.cliente_id_mail_phone,
     p.direccion_id,
 
     -- ── Cliente ──────────────────────────────────────────────────────────────

@@ -16,6 +16,21 @@ st.title("Zonas de Delivery")
 df = load_zonas()
 df["zona_label"] = "Zona " + df["zona_id"].astype(str)
 
+# ── KPIs ──────────────────────────────────────────────────────────────────────
+total_pedidos = int(df["total_pedidos"].sum())
+total_kg = df["kg_totales"].sum() if "kg_totales" in df.columns else 0
+total_ventas = df["venta_total"].sum()
+total_ventas_usd = df["venta_total_usd"].sum() if "venta_total_usd" in df.columns else 0
+
+kpi_row([
+    ("Pedidos (Q)", f"{total_pedidos:,}"),
+    ("KG", f"{total_kg:,.0f}"),
+    ("Ventas ($)", fmt_ars(total_ventas)),
+    ("Ventas (USD)", fmt_usd(total_ventas_usd)),
+])
+
+st.divider()
+
 # ── Bar chart: total_pedidos by zona ─────────────────────────────────────────
 st.subheader("Pedidos por Zona")
 
@@ -51,7 +66,8 @@ st.subheader("Metricas por Zona")
 
 metrics_cols = [
     "zona_label", "total_pedidos", "total_clientes", "venta_total",
-    "ticket_promedio", "demora_promedio_real", "distancia_promedio_real",
+    "venta_total_usd", "kg_totales", "ticket_promedio",
+    "demora_promedio_real", "distancia_promedio_real",
     "precio_envio", "pct_pedidos_total",
 ]
 available_cols = [c for c in metrics_cols if c in df.columns]

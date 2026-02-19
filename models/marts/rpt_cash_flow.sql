@@ -32,6 +32,7 @@ outflows as (
         sum(case when medio_pago = 'otro' then monto else 0 end) as egresos_otro,
         sum(monto) as total_egresos
     from {{ ref('stg_egresos') }}
+    where categoria != 'Inversion'
     group by 1
 ),
 

@@ -15,6 +15,21 @@ st.title("Analisis RFM")
 # ── Load data ─────────────────────────────────────────────────────────────────
 df = load_rfm()
 
+# ── KPIs ──────────────────────────────────────────────────────────────────────
+total_clientes = len(df)
+total_pedidos = int(df["total_pedidos"].sum()) if "total_pedidos" in df.columns else 0
+total_gastado = df["total_gastado"].sum() if "total_gastado" in df.columns else 0
+total_gastado_usd = df["total_gastado_usd"].sum() if "total_gastado_usd" in df.columns else 0
+
+kpi_row([
+    ("Clientes (Q)", f"{total_clientes:,}"),
+    ("Total Pedidos (Q)", f"{total_pedidos:,}"),
+    ("Total Gastado ($)", fmt_ars(total_gastado)),
+    ("Total Gastado (USD)", fmt_usd(total_gastado_usd)),
+])
+
+st.divider()
+
 # ── Segment distribution bar chart ───────────────────────────────────────────
 st.subheader("Distribucion por Segmento")
 
@@ -76,7 +91,7 @@ if search:
 display_cols = [
     "cliente_id", "nombre", "email", "segmento_cliente",
     "recencia_score", "frecuencia_score", "monetario_score", "rfm_total",
-    "total_pedidos", "total_gastado", "ticket_promedio",
+    "total_pedidos", "total_gastado", "total_gastado_usd", "ticket_promedio",
     "dias_desde_ultimo_pedido", "recencia_label", "frecuencia_label",
 ]
 available_cols = [c for c in display_cols if c in show.columns]

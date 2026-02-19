@@ -18,6 +18,21 @@ df = load_cash_flow()
 df["mes"] = pd.to_datetime(df["mes"])
 df = df.sort_values("mes")
 
+# ── KPIs ──────────────────────────────────────────────────────────────────────
+total_inflows = df["total_inflows"].sum()
+total_outflows = df["total_outflows"].sum()
+total_flujo_neto = df["flujo_neto"].sum()
+total_flujo_neto_usd = df["flujo_neto_usd"].sum() if "flujo_neto_usd" in df.columns else 0
+
+kpi_row([
+    ("Total Inflows ($)", fmt_ars(total_inflows)),
+    ("Total Outflows ($)", fmt_ars(total_outflows)),
+    ("Flujo Neto ($)", fmt_ars(total_flujo_neto)),
+    ("Flujo Neto (USD)", fmt_usd(total_flujo_neto_usd)),
+])
+
+st.divider()
+
 # ── Monthly stacked bar: inflows vs outflows ─────────────────────────────────
 st.subheader("Inflows vs Outflows Mensuales")
 
@@ -60,6 +75,7 @@ st.subheader("Tabla de Cash Flow")
 display_cols = [
     "mes", "cobros_efectivo", "cobros_mp_neto", "cobros_transferencia",
     "total_inflows", "total_outflows", "flujo_neto", "flujo_neto_acumulado",
+    "total_inflows_usd", "total_outflows_usd", "flujo_neto_usd",
 ]
 available_cols = [c for c in display_cols if c in df.columns]
 

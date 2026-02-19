@@ -10,7 +10,7 @@
 
 with primer_pedido as (
     select
-        identidad,
+        cliente_id_mail_phone,
         fecha_primer_pedido,
         pedido_id
     from {{ ref('int_primer_pedido') }}
@@ -20,7 +20,7 @@ with primer_pedido as (
 -- Mes de adquisición por identidad
 cohort as (
     select
-        identidad,
+        cliente_id_mail_phone,
         date_trunc('month', fecha_primer_pedido)::date as mes_adquisicion,
         fecha_primer_pedido,
         pedido_id as primer_pedido_id
@@ -30,7 +30,7 @@ cohort as (
 -- Info del primer pedido
 primer_info as (
     select
-        co.identidad,
+        co.cliente_id_mail_phone,
         co.mes_adquisicion,
         fp.tipo_retiro,
         fp.tipo_pago,
@@ -42,12 +42,12 @@ primer_info as (
 -- Pedidos subsiguientes (para retención)
 todos_pedidos as (
     select
-        pp.identidad,
+        pp.cliente_id_mail_phone,
         pp.fecha_primer_pedido,
         fp.created_at as fecha_pedido
     from primer_pedido pp
     inner join {{ ref('int_primer_pedido') }} ip
-        on pp.identidad = ip.identidad
+        on pp.cliente_id_mail_phone = ip.cliente_id_mail_phone
     inner join {{ ref('fct_pedidos') }} fp
         on ip.pedido_id = fp.pedido_id
     where fp.estado_id = 3
@@ -56,14 +56,14 @@ todos_pedidos as (
 
 retencion as (
     select
-        co.identidad,
+        co.cliente_id_mail_phone,
         co.mes_adquisicion,
         max(case when tp.fecha_pedido <= co.fecha_primer_pedido + interval '30 days' then 1 else 0 end) as retuvo_30d,
         max(case when tp.fecha_pedido <= co.fecha_primer_pedido + interval '60 days' then 1 else 0 end) as retuvo_60d,
         max(case when tp.fecha_pedido <= co.fecha_primer_pedido + interval '90 days' then 1 else 0 end) as retuvo_90d
     from cohort co
-    left join todos_pedidos tp on co.identidad = tp.identidad
-    group by co.identidad, co.mes_adquisicion
+    left join todos_pedidos tp on co.cliente_id_mail_phone = tp.cliente_id_mail_phone
+    group by co.cliente_id_mail_phone, co.mes_adquisicion
 ),
 
 -- Agregación mensual
@@ -73,7 +73,7 @@ nuevos_por_mes as (
         extract(year from pi.mes_adquisicion) as anio,
         extract(month from pi.mes_adquisicion) as mes_num,
 
-        count(distinct pi.identidad) as clientes_nuevos,
+        count(distinct pi.cliente_id_mail_phone) as clientes_nuevos,
 
         -- Canal primer pedido
         count(case when pi.tipo_retiro = 'delivery' then 1 end) as nuevos_delivery,

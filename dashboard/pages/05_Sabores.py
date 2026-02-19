@@ -27,6 +27,17 @@ if sin_azucar_opt == "Solo sin azucar":
 elif sin_azucar_opt == "Solo con azucar":
     filtered = filtered[filtered["is_sin_azucar"] == 0]
 
+# ── KPIs ──────────────────────────────────────────────────────────────────────
+total_sabores = len(filtered)
+total_q = int(filtered["veces_pedido"].sum())
+total_kg = filtered["kg_vendidos"].sum() if "kg_vendidos" in filtered.columns else 0
+
+kpi_row([
+    ("Sabores", f"{total_sabores:,}"),
+    ("Veces Pedido (Q)", f"{total_q:,}"),
+    ("KG Vendidos", f"{total_kg:,.0f}"),
+])
+
 st.divider()
 
 # ── Horizontal bar: veces_pedido top 20 ──────────────────────────────────────

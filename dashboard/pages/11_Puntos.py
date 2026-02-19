@@ -18,12 +18,14 @@ df = load_puntos()
 # ── KPIs ──────────────────────────────────────────────────────────────────────
 total_acumulados = int(df["puntos_acumulados"].sum())
 total_canjeados = int(df["puntos_canjeados"].sum())
-avg_ratio = df["ratio_canje"].mean() if len(df) > 0 else 0
+total_saldo = int(df["saldo_vigente"].sum()) if "saldo_vigente" in df.columns else 0
+total_activos = int(df["is_activo_puntos"].sum()) if "is_activo_puntos" in df.columns else 0
 
 kpi_row([
     ("Puntos Acumulados", f"{total_acumulados:,}"),
     ("Puntos Canjeados", f"{total_canjeados:,}"),
-    ("Ratio Canje Promedio", fmt_pct(avg_ratio)),
+    ("Saldo Vigente", f"{total_saldo:,}"),
+    ("Clientes Activos", f"{total_activos:,}"),
 ])
 
 st.divider()

@@ -5,13 +5,19 @@
 }}
 
 -- ════════════════════════════════════════════════════════════════════════════
--- rpt_zonas: métricas de delivery por zona
+-- rpt_zonas: métricas de delivery por zona (clientes por identidad)
 -- ════════════════════════════════════════════════════════════════════════════
 
-with pedidos_delivery as (
+with mails as (
+    select cliente_id, cliente_id_mail_phone
+    from {{ ref('dim_mails') }}
+),
+
+pedidos_delivery as (
     select
         fp.pedido_id,
         fp.cliente_id,
+        m.cliente_id_mail_phone,
         fp.total,
         fp.costo_envio,
         fp.demora_minutos,
@@ -22,6 +28,7 @@ with pedidos_delivery as (
     from {{ ref('fct_pedidos') }} fp
     inner join {{ ref('stg_clientes_direcciones') }} d
         on fp.direccion_id = d.direccion_id
+    left join mails m on fp.cliente_id = m.cliente_id
     where fp.estado_id = 3
       and fp.tipo_retiro = 'delivery'
       and d.zona_id is not null
@@ -31,7 +38,7 @@ metricas_por_zona as (
     select
         zona_id,
         count(*) as total_pedidos,
-        count(distinct cliente_id) as total_clientes,
+        count(distinct cliente_id_mail_phone) as total_clientes,
         round(sum(total), 2) as venta_total,
         round(avg(total), 2) as ticket_promedio,
         round(sum(costo_envio), 2) as costo_envio_total,

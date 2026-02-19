@@ -27,6 +27,20 @@ sel_dim = st.selectbox(
 filtered = df[df["dimension_tipo"] == sel_dim].copy()
 filtered = filtered.sort_values("mes")
 
+
+# ── KPIs ──────────────────────────────────────────────────────────────────────
+total_pedidos = int(filtered["pedidos"].sum()) if "pedidos" in filtered.columns else 0
+total_kg = filtered["kg_totales"].sum() if "kg_totales" in filtered.columns else 0
+total_contribucion = filtered["contribucion_mg"].sum() if "contribucion_mg" in filtered.columns else 0
+total_contribucion_usd = filtered["contribucion_mg_usd"].sum() if "contribucion_mg_usd" in filtered.columns else 0
+
+kpi_row([
+    ("Pedidos (Q)", f"{total_pedidos:,}"),
+    ("KG", f"{total_kg:,.0f}"),
+    ("Contribucion MG ($)", fmt_ars(total_contribucion)),
+    ("Contribucion MG (USD)", fmt_usd(total_contribucion_usd)),
+])
+
 st.divider()
 
 # ── Line chart: margen_pct over time ─────────────────────────────────────────
@@ -66,7 +80,7 @@ st.subheader("Tabla de Margenes")
 display_cols = [
     "mes", "dimension_tipo", "dimension_valor", "pedidos",
     "venta_total", "costo_total", "contribucion_mg", "margen_pct",
-    "kg_totales",
+    "kg_totales", "venta_total_usd", "costo_total_usd", "contribucion_mg_usd",
 ]
 available_cols = [c for c in display_cols if c in filtered.columns]
 

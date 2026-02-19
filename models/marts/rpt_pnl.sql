@@ -42,15 +42,18 @@ with ingresos_mensuales as (
 egresos_mensuales as (
     select
         strftime(cast(fecha as date), '%Y-%m-01')::date as mes,
-        sum(case when categoria = 'mano_de_obra' then monto else 0 end) as gasto_mano_obra,
-        sum(case when categoria = 'alquiler' then monto else 0 end) as gasto_alquiler,
-        sum(case when categoria = 'servicios' then monto else 0 end) as gasto_servicios,
-        sum(case when categoria = 'marketing' then monto else 0 end) as gasto_marketing,
-        sum(case when categoria = 'impuestos' then monto else 0 end) as gasto_impuestos,
-        sum(case when categoria = 'logistica' then monto else 0 end) as gasto_logistica,
-        sum(case when categoria not in ('mano_de_obra','alquiler','servicios','marketing','impuestos','logistica')
-            then monto else 0 end) as gasto_otros,
-        sum(monto) as total_gastos_operativos
+        sum(case when categoria = 'Mano de obra' then monto else 0 end) as gasto_mano_obra,
+        sum(case when categoria = 'Alquiler' then monto else 0 end) as gasto_alquiler,
+        sum(case when categoria = 'Servicios' then monto else 0 end) as gasto_servicios,
+        sum(case when categoria = 'Marketing' then monto else 0 end) as gasto_marketing,
+        sum(case when categoria = 'Impuestos' then monto else 0 end) as gasto_impuestos,
+        sum(case when categoria = 'Logistica' then monto else 0 end) as gasto_logistica,
+        sum(case when categoria not in (
+            'Mano de obra','Alquiler','Servicios','Marketing','Impuestos','Logistica',
+            'Insumos','Potes'  -- excluidos: ya están en COGS por pedido
+        ) then monto else 0 end) as gasto_otros,
+        sum(case when categoria not in ('Insumos','Potes')
+            then monto else 0 end) as total_gastos_operativos
     from {{ ref('stg_egresos') }}
     group by 1
 ),

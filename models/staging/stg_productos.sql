@@ -41,8 +41,8 @@ renamed as (
         -- Peso en kg por tipo de producto
         case
             -- Packs especiales (más específicos primero)
-            when lower(nombre) like '%pack 5 cucuruch%'         then 1.0   -- 5 × 0.2
-            when lower(nombre) like '%pack 4 cucuruch%'         then 0.8   -- 4 × 0.2
+            when lower(nombre) like '%pack 5 cucuruch%'         then 0   -- 5 × 0.2
+            when lower(nombre) like '%pack 4 cucuruch%'         then 0   -- 4 × 0.2
             when lower(nombre) like '%4 de 1/2%'               then 2.0   -- 4 × 0.5
             when lower(nombre) like '%3 de 1/4%'               then 0.75  -- 3 × 0.25
             when lower(nombre) like '%1kg + 1/2%'              then 1.5   -- 1 + 0.5

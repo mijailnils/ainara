@@ -64,12 +64,19 @@ dolar as (
 primer_pedido as (
     select pedido_id, is_primer_pedido, fecha_primer_pedido
     from {{ ref('int_primer_pedido') }}
+),
+
+-- Identidad
+mails as (
+    select cliente_id, cliente_id_mail_phone
+    from {{ ref('dim_mails') }}
 )
 
 select
     -- IDs
     p.pedido_id,
     p.cliente_id,
+    m.cliente_id_mail_phone,
     p.direccion_id,
     
     -- Info del cliente
@@ -102,8 +109,8 @@ select
 
     -- Temporada comercial
     case
-        when month(p.created_at) in (11, 12, 1, 2) then 'Alta'
-        when month(p.created_at) in (4, 5, 6, 7, 8) then 'Baja'
+        when month(p.created_at) in (11, 12, 1) then 'Alta'
+        when month(p.created_at) in (5, 6, 7) then 'Baja'
         else 'Media'
     end as temporada,
 
@@ -191,4 +198,5 @@ left join kg_por_pedido kp on p.pedido_id = kp.pedido_id
 left join costos cs on p.pedido_id = cs.pedido_id
 left join dolar db on cast(p.created_at as date) = db.fecha
 left join primer_pedido ppf on p.pedido_id = ppf.pedido_id
+left join mails m on p.cliente_id = m.cliente_id
 --where p.is_activo = 1
