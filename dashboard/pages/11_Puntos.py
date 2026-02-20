@@ -4,11 +4,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-from app import load_puntos
+from data import load_puntos
 from theme import apply_theme, styled_fig, COLORS, TEAL, DARK_BLUE
 from components import kpi_row, fmt_ars, fmt_usd, fmt_pct
+from ai_chat import ai_chat_section
 
-st.set_page_config(page_title="Puntos - Ainara", page_icon="\U0001f366", layout="wide")
 apply_theme()
 st.title("Programa de Puntos")
 
@@ -42,7 +42,7 @@ fig_top = px.bar(
     color_discrete_sequence=COLORS,
 )
 styled_fig(fig_top, "Top 15 por Puntos Acumulados")
-st.plotly_chart(fig_top, use_container_width=True)
+st.plotly_chart(fig_top, width='stretch')
 
 st.divider()
 
@@ -58,7 +58,7 @@ fig_activo = px.pie(
 )
 styled_fig(fig_activo, "Clientes Activos vs Inactivos en Puntos")
 fig_activo.update_traces(textposition="inside", textinfo="percent+label")
-st.plotly_chart(fig_activo, use_container_width=True)
+st.plotly_chart(fig_activo, width='stretch')
 
 st.divider()
 
@@ -75,6 +75,10 @@ available_cols = [c for c in display_cols if c in df.columns]
 
 st.dataframe(
     df[available_cols].sort_values("puntos_acumulados", ascending=False),
-    use_container_width=True,
+    width='stretch',
     hide_index=True,
 )
+
+
+# -- AI Chat --
+ai_chat_section(df, "puntos", "Programa de puntos: acumulados, canjeados, saldo, ratio canje")

@@ -141,8 +141,8 @@ rfm_scores as (
             else 1
         end as frecuencia_score,
 
-        -- Monetario: quintiles (1-5)
-        ntile(5) over (order by total_gastado) as monetario_score
+        -- Volumen KG: quintiles (1-5)
+        ntile(5) over (order by kg_total) as monetario_score
     from rfm_calc
 )
 

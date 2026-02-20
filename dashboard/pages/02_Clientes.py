@@ -4,11 +4,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-from app import load_clientes
+from data import load_clientes
 from theme import apply_theme, styled_fig, COLORS, TEAL, DARK_BLUE
 from components import kpi_row, fmt_ars, fmt_usd, fmt_pct
+from ai_chat import ai_chat_section
 
-st.set_page_config(page_title="Clientes - Ainara", page_icon="\U0001f366", layout="wide")
 apply_theme()
 st.title("Clientes")
 
@@ -44,7 +44,7 @@ fig_pie = px.pie(
 )
 styled_fig(fig_pie, "Segmentos de Clientes")
 fig_pie.update_traces(textposition="inside", textinfo="percent+label")
-st.plotly_chart(fig_pie, use_container_width=True)
+st.plotly_chart(fig_pie, width='stretch')
 
 st.divider()
 
@@ -61,7 +61,7 @@ fig_top = px.bar(
     color_discrete_sequence=COLORS,
 )
 styled_fig(fig_top, "Top 15 Clientes por Gasto")
-st.plotly_chart(fig_top, use_container_width=True)
+st.plotly_chart(fig_top, width='stretch')
 
 st.divider()
 
@@ -79,7 +79,7 @@ with col1:
     )
     fig_r.update_layout(showlegend=False)
     styled_fig(fig_r, "Tipo de Retiro Preferido")
-    st.plotly_chart(fig_r, use_container_width=True)
+    st.plotly_chart(fig_r, width='stretch')
 
 with col2:
     st.subheader("Tipo de Pago Preferido")
@@ -92,7 +92,7 @@ with col2:
     )
     fig_p.update_layout(showlegend=False)
     styled_fig(fig_p, "Tipo de Pago Preferido")
-    st.plotly_chart(fig_p, use_container_width=True)
+    st.plotly_chart(fig_p, width='stretch')
 
 st.divider()
 
@@ -112,10 +112,14 @@ if search:
     show = show[show["nombre"].str.contains(search, case=False, na=False)]
 
 display_cols = [
-    "cliente_id", "nombre", "email", "barrio", "total_pedidos",
+    "cliente_id", "nombre", "barrio", "total_pedidos",
     "total_gastado", "total_gastado_usd", "ticket_promedio", "kg_total",
     "dias_desde_ultimo_pedido", "segmento_cliente",
     "tipo_retiro_preferido", "tipo_pago_preferido",
 ]
 available_cols = [c for c in display_cols if c in show.columns]
-st.dataframe(show[available_cols], use_container_width=True, hide_index=True)
+st.dataframe(show[available_cols], width='stretch', hide_index=True)
+
+
+# -- AI Chat --
+ai_chat_section(buyers, "clientes", "Clientes con compras: segmento RFM, gasto, KG, tipo retiro/pago")

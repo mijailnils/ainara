@@ -67,12 +67,12 @@ select
     extract(month from vb.fecha) as mes_num,
     dayofweek(vb.fecha) as dia_semana,
 
-    -- Estación / Temporada
+    -- Estación argentina
     case
-        when extract(month from vb.fecha) in (11,12, 1, 2) then 'Septiembre - Febrero'
-        when extract(month from vb.fecha) in (3, 4)  then 'Marzo - Abril'
-        when extract(month from vb.fecha) in (5,6, 7)  then 'Mayo - Julio'
-        when extract(month from vb.fecha) in (8,9, 10) then 'Agosto - Octubre'
+        when extract(month from vb.fecha) in (12, 1, 2) then 'Verano'
+        when extract(month from vb.fecha) in (3, 4, 5)  then 'Otoño'
+        when extract(month from vb.fecha) in (6, 7, 8)  then 'Invierno'
+        when extract(month from vb.fecha) in (9, 10, 11) then 'Primavera'
     end as estacion,
     case
         when extract(month from vb.fecha) in (11, 12, 1) then 'Alta'

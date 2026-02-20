@@ -6,7 +6,10 @@
 
 -- ════════════════════════════════════════════════════════════════════════════
 -- rpt_pnl: Estado de Resultados mensual
--- Ingresos → COGS → Margen bruto → Gastos Op → Comisiones → Resultado
+-- Ingresos → Insumos (compra real) → Margen bruto → Gastos Op → Comisiones
+--   → Delivery → Resultado operativo
+-- Nota: COGS sistema es informativo (costo teorico por receta).
+--       La linea principal de costo es Insumos (compras reales de ingredientes).
 -- ════════════════════════════════════════════════════════════════════════════
 
 with ingresos_mensuales as (
@@ -19,7 +22,7 @@ with ingresos_mensuales as (
         sum(venta_plataforma_estimada) as venta_plataforma,
         sum(venta_total) as ingresos_totales,
 
-        -- COGS
+        -- COGS sistema (informativo, no usado en resultado)
         sum(costo_total_sistema) as cogs_sistema,
         sum(costo_plataforma_estimado) as cogs_plataforma,
         sum(costo_total_sistema) + sum(costo_plataforma_estimado) as cogs_total,
@@ -32,7 +35,7 @@ with ingresos_mensuales as (
         -- Delivery
         sum(costo_delivery_total) as costo_delivery,
 
-        -- Métricas operativas
+        -- Metricas operativas
         sum(pedidos_totales) as pedidos_totales,
         sum(kg_totales) as kg_totales
     from {{ ref('fct_ventas_diarias') }}
@@ -42,6 +45,8 @@ with ingresos_mensuales as (
 egresos_mensuales as (
     select
         strftime(cast(fecha as date), '%Y-%m-01')::date as mes,
+        -- Insumos = costo real de ingredientes
+        sum(case when categoria in ('Insumos', 'Potes') then monto else 0 end) as gasto_insumos,
         sum(case when categoria = 'Mano de obra' then monto else 0 end) as gasto_mano_obra,
         sum(case when categoria = 'Alquiler' then monto else 0 end) as gasto_alquiler,
         sum(case when categoria = 'Servicios' then monto else 0 end) as gasto_servicios,
@@ -50,9 +55,10 @@ egresos_mensuales as (
         sum(case when categoria = 'Logistica' then monto else 0 end) as gasto_logistica,
         sum(case when categoria not in (
             'Mano de obra','Alquiler','Servicios','Marketing','Impuestos','Logistica',
-            'Insumos','Potes'  -- excluidos: ya están en COGS por pedido
+            'Insumos','Potes','Inversion'
         ) then monto else 0 end) as gasto_otros,
-        sum(case when categoria not in ('Insumos','Potes')
+        -- Gastos operativos (todo excepto Insumos/Potes e Inversion)
+        sum(case when categoria not in ('Insumos','Potes','Inversion')
             then monto else 0 end) as total_gastos_operativos
     from {{ ref('stg_egresos') }}
     group by 1
@@ -76,17 +82,20 @@ select
     im.venta_plataforma,
     im.ingresos_totales,
 
-    -- COGS
+    -- Insumos (costo real de ingredientes)
+    coalesce(em.gasto_insumos, 0) as gasto_insumos,
+
+    -- Margen bruto (Ingresos - Insumos)
+    im.ingresos_totales - coalesce(em.gasto_insumos, 0) as margen_bruto,
+    case when im.ingresos_totales > 0
+        then round(100.0 * (im.ingresos_totales - coalesce(em.gasto_insumos, 0)) / im.ingresos_totales, 1)
+        else 0
+    end as margen_bruto_pct,
+
+    -- COGS sistema (informativo)
     im.cogs_sistema,
     im.cogs_plataforma,
     im.cogs_total,
-
-    -- Margen bruto
-    im.ingresos_totales - im.cogs_total as margen_bruto,
-    case when im.ingresos_totales > 0
-        then round(100.0 * (im.ingresos_totales - im.cogs_total) / im.ingresos_totales, 1)
-        else 0
-    end as margen_bruto_pct,
 
     -- Gastos operativos
     coalesce(em.gasto_mano_obra, 0) as gasto_mano_obra,
@@ -106,9 +115,9 @@ select
     -- Delivery
     im.costo_delivery,
 
-    -- Resultado operativo
+    -- Resultado operativo = Ingresos - Insumos - GastosOp - Comisiones - Delivery
     im.ingresos_totales
-        - im.cogs_total
+        - coalesce(em.gasto_insumos, 0)
         - coalesce(em.total_gastos_operativos, 0)
         - im.total_comisiones
         - im.costo_delivery
@@ -117,7 +126,7 @@ select
     case when im.ingresos_totales > 0
         then round(100.0 * (
             im.ingresos_totales
-            - im.cogs_total
+            - coalesce(em.gasto_insumos, 0)
             - coalesce(em.total_gastos_operativos, 0)
             - im.total_comisiones
             - im.costo_delivery
@@ -128,13 +137,14 @@ select
     -- USD
     dm.tipo_cambio_promedio,
     round(im.ingresos_totales / nullif(dm.tipo_cambio_promedio, 0), 2) as ingresos_totales_usd,
+    round(coalesce(em.gasto_insumos, 0) / nullif(dm.tipo_cambio_promedio, 0), 2) as gasto_insumos_usd,
+    round((im.ingresos_totales - coalesce(em.gasto_insumos, 0)) / nullif(dm.tipo_cambio_promedio, 0), 2) as margen_bruto_usd,
     round(im.cogs_total / nullif(dm.tipo_cambio_promedio, 0), 2) as cogs_total_usd,
-    round((im.ingresos_totales - im.cogs_total) / nullif(dm.tipo_cambio_promedio, 0), 2) as margen_bruto_usd,
     round(coalesce(em.total_gastos_operativos, 0) / nullif(dm.tipo_cambio_promedio, 0), 2) as total_gastos_operativos_usd,
-    round((im.ingresos_totales - im.cogs_total - coalesce(em.total_gastos_operativos, 0)
+    round((im.ingresos_totales - coalesce(em.gasto_insumos, 0) - coalesce(em.total_gastos_operativos, 0)
         - im.total_comisiones - im.costo_delivery) / nullif(dm.tipo_cambio_promedio, 0), 2) as resultado_operativo_usd,
 
-    -- Métricas operativas
+    -- Metricas operativas
     im.pedidos_totales,
     im.kg_totales
 

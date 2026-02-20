@@ -56,6 +56,12 @@ costo_promedio as (
     group by sabor_id
 ),
 
+-- Tipo de cambio promedio del periodo
+dolar_promedio as (
+    select round(avg(valor_blue), 2) as avg_dolar
+    from {{ ref('stg_dolar_blue') }}
+),
+
 -- Métricas por sabor
 metricas as (
     select
@@ -92,6 +98,19 @@ select
     coalesce(cp.costo_promedio_kg, 0) as costo_promedio_kg,
     round(coalesce(cp.costo_promedio_kg, 0) * 3 - coalesce(cp.costo_promedio_kg, 0), 2) as margen_estimado_por_kg,
 
+    -- Costo total estimado
+    round(m.kg_vendidos * coalesce(cp.costo_promedio_kg, 0), 2) as costo_total_estimado,
+
+    -- Margen total estimado ARS
+    round(m.kg_vendidos * coalesce(cp.costo_promedio_kg, 0) * 3 - m.kg_vendidos * coalesce(cp.costo_promedio_kg, 0), 2) as margen_total_estimado,
+
+    -- USD conversions
+    round(m.kg_vendidos * coalesce(cp.costo_promedio_kg, 0) * 3 / nullif(dp.avg_dolar, 0), 2) as ingreso_estimado_usd,
+    round(m.kg_vendidos * coalesce(cp.costo_promedio_kg, 0) / nullif(dp.avg_dolar, 0), 2) as costo_total_usd,
+    round((m.kg_vendidos * coalesce(cp.costo_promedio_kg, 0) * 3 - m.kg_vendidos * coalesce(cp.costo_promedio_kg, 0)) / nullif(dp.avg_dolar, 0), 2) as margen_total_usd,
+    round(coalesce(cp.costo_promedio_kg, 0) / nullif(dp.avg_dolar, 0), 2) as costo_promedio_kg_usd,
+    round((coalesce(cp.costo_promedio_kg, 0) * 3 - coalesce(cp.costo_promedio_kg, 0)) / nullif(dp.avg_dolar, 0), 2) as margen_estimado_por_kg_usd,
+
     -- Ranking
     row_number() over (order by m.veces_pedido desc) as ranking,
     round(100.0 * m.veces_pedido / tp.total, 2) as porcentaje_del_total,
@@ -113,4 +132,5 @@ inner join {{ ref('stg_sabores') }} s on m.sabor_id = s.sabor_id
 left join {{ ref('stg_sabores_categorias') }} sc on s.categoria_id = sc.categoria_id
 left join costo_promedio cp on m.sabor_id = cp.sabor_id
 cross join total_pedidos tp
+cross join dolar_promedio dp
 order by m.veces_pedido desc

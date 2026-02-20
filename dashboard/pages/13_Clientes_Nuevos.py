@@ -5,17 +5,19 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
-from app import load_clientes_nuevos
+from data import load_clientes_nuevos
 from theme import apply_theme, styled_fig, COLORS, TEAL, DARK_BLUE, SAGE_GREEN
-from components import kpi_row, fmt_ars, fmt_usd, fmt_pct
+from components import kpi_row, fmt_ars, fmt_usd, fmt_pct, sidebar_date_slicer, filter_by_date
+from ai_chat import ai_chat_section
 
-st.set_page_config(page_title="Clientes Nuevos - Ainara", page_icon="\U0001f366", layout="wide")
 apply_theme()
 st.title("Clientes Nuevos")
 
-# ── Load data ─────────────────────────────────────────────────────────────────
+# ── Load & filter ─────────────────────────────────────────────────────────────
 df = load_clientes_nuevos()
 df["mes"] = pd.to_datetime(df["mes"])
+start_date, end_date = sidebar_date_slicer("clientes_nuevos")
+df = filter_by_date(df, "mes", start_date, end_date)
 df = df.sort_values("mes")
 
 # ── KPIs ──────────────────────────────────────────────────────────────────────
@@ -42,7 +44,7 @@ fig_nuevos = px.line(
     labels={"mes": "Mes", "clientes_nuevos": "Clientes Nuevos"},
 )
 styled_fig(fig_nuevos, "Clientes Nuevos por Mes")
-st.plotly_chart(fig_nuevos, use_container_width=True)
+st.plotly_chart(fig_nuevos, width='stretch')
 
 st.divider()
 
@@ -73,7 +75,7 @@ if available_ret:
         color_discrete_sequence=[TEAL, DARK_BLUE, SAGE_GREEN],
     )
     styled_fig(fig_ret, "Retencion por Cohorte")
-    st.plotly_chart(fig_ret, use_container_width=True)
+    st.plotly_chart(fig_ret, width='stretch')
 
 st.divider()
 
@@ -104,7 +106,7 @@ if available_ch:
         color_discrete_sequence=COLORS,
     )
     styled_fig(fig_ch, "Clientes Nuevos por Canal")
-    st.plotly_chart(fig_ch, use_container_width=True)
+    st.plotly_chart(fig_ch, width='stretch')
 
 st.divider()
 
@@ -121,6 +123,10 @@ available_cols = [c for c in display_cols if c in df.columns]
 
 st.dataframe(
     df[available_cols].sort_values("mes", ascending=False),
-    use_container_width=True,
+    width='stretch',
     hide_index=True,
 )
+
+
+# -- AI Chat --
+ai_chat_section(df, "clientes_nuevos", "Adquisicion de clientes nuevos mensual: retencion, canal, ticket")

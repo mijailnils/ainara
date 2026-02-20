@@ -4,26 +4,19 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-from app import load_egresos
+from data import load_egresos
 from theme import apply_theme, styled_fig, COLORS, TEAL, DARK_BLUE
-from components import kpi_row, fmt_ars, fmt_usd, fmt_pct
+from components import kpi_row, fmt_ars, fmt_usd, fmt_pct, sidebar_date_slicer, filter_by_date
+from ai_chat import ai_chat_section
 
-st.set_page_config(page_title="Egresos - Ainara", page_icon="\U0001f366", layout="wide")
 apply_theme()
 st.title("Egresos")
 
-# ── Load data ─────────────────────────────────────────────────────────────────
+# ── Load & filter ─────────────────────────────────────────────────────────────
 df = load_egresos()
 df["mes"] = pd.to_datetime(df["mes"])
-
-# ── Year filter ───────────────────────────────────────────────────────────────
-years = sorted(df["anio"].dropna().unique())
-sel_year = st.selectbox("Ano", options=["Todos"] + [int(y) for y in years], index=0)
-
-if sel_year != "Todos":
-    filtered = df[df["anio"] == sel_year].copy()
-else:
-    filtered = df.copy()
+start_date, end_date = sidebar_date_slicer("egresos")
+filtered = filter_by_date(df, "mes", start_date, end_date)
 
 # ── KPIs ──────────────────────────────────────────────────────────────────────
 total_monto = filtered["monto_total"].sum()
@@ -53,7 +46,7 @@ fig_tree = px.treemap(
 )
 styled_fig(fig_tree, "Egresos por Categoria")
 fig_tree.update_layout(height=500)
-st.plotly_chart(fig_tree, use_container_width=True)
+st.plotly_chart(fig_tree, width='stretch')
 
 st.divider()
 
@@ -71,7 +64,7 @@ fig_trend = px.line(
     color_discrete_sequence=COLORS,
 )
 styled_fig(fig_trend, "Tendencia Mensual - Top 5 Categorias")
-st.plotly_chart(fig_trend, use_container_width=True)
+st.plotly_chart(fig_trend, width='stretch')
 
 st.divider()
 
@@ -86,6 +79,10 @@ available_cols = [c for c in display_cols if c in filtered.columns]
 
 st.dataframe(
     filtered[available_cols].sort_values("mes", ascending=False),
-    use_container_width=True,
+    width='stretch',
     hide_index=True,
 )
+
+
+# -- AI Chat --
+ai_chat_section(df, "egresos", "Egresos mensuales por categoria: insumos, MO, servicios")

@@ -5,11 +5,11 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
-from app import load_ventas
+from data import load_ventas
 from theme import apply_theme, styled_fig, COLORS, TEAL, DARK_BLUE
-from components import kpi_row, fmt_ars, fmt_usd, fmt_pct
+from components import kpi_row, fmt_ars, fmt_usd, fmt_pct, sidebar_date_slicer, filter_by_date
+from ai_chat import ai_chat_section
 
-st.set_page_config(page_title="Ventas - Ainara", page_icon="\U0001f366", layout="wide")
 apply_theme()
 st.title("Ventas")
 
@@ -17,16 +17,9 @@ st.title("Ventas")
 df = load_ventas()
 df["fecha"] = pd.to_datetime(df["fecha"])
 
-# ── Filtro de fecha ───────────────────────────────────────────────────────────
-min_date = df["fecha"].min().date()
-max_date = df["fecha"].max().date()
-
-col_f1, col_f2 = st.columns(2)
-start_date = col_f1.date_input("Desde", value=min_date, min_value=min_date, max_value=max_date)
-end_date = col_f2.date_input("Hasta", value=max_date, min_value=min_date, max_value=max_date)
-
-mask = (df["fecha"].dt.date >= start_date) & (df["fecha"].dt.date <= end_date)
-filtered = df[mask].copy()
+# ── Sidebar date slicer ──────────────────────────────────────────────────────
+start_date, end_date = sidebar_date_slicer("ventas")
+filtered = filter_by_date(df, "fecha", start_date, end_date)
 
 # ── KPIs: siempre Q, KG, $, USD ──────────────────────────────────────────────
 total_q = int(filtered["pedidos_totales"].sum())
@@ -64,35 +57,33 @@ monthly = filtered.groupby("mes_dt", as_index=False).agg(**{k: (k, v) for k, v i
 
 def render_ventas(data, x_col, title_prefix):
     """Render the 4 metrics charts for a given granularity."""
-    # Fila 1: Q y KG
     c1, c2 = st.columns(2)
     with c1:
         fig = px.bar(data, x=x_col, y="pedidos_totales",
                      labels={x_col: "", "pedidos_totales": "Pedidos (Q)"},
                      color_discrete_sequence=[TEAL])
         styled_fig(fig, f"{title_prefix} — Pedidos (Q)")
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
     with c2:
         fig = px.bar(data, x=x_col, y="kg_totales",
                      labels={x_col: "", "kg_totales": "KG"},
                      color_discrete_sequence=[DARK_BLUE])
         styled_fig(fig, f"{title_prefix} — KG")
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
-    # Fila 2: $ y USD
     c3, c4 = st.columns(2)
     with c3:
         fig = px.line(data, x=x_col, y="venta_total", markers=True,
                       labels={x_col: "", "venta_total": "Ventas ($)"},
                       color_discrete_sequence=[TEAL])
         styled_fig(fig, f"{title_prefix} — Ventas ($)")
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
     with c4:
         fig = px.line(data, x=x_col, y="venta_total_usd", markers=True,
                       labels={x_col: "", "venta_total_usd": "Ventas (USD)"},
                       color_discrete_sequence=[DARK_BLUE])
         styled_fig(fig, f"{title_prefix} — Ventas (USD)")
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
 
 with tab_d:
@@ -113,18 +104,18 @@ filtered["mes_str"] = filtered["fecha"].dt.to_period("M").astype(str)
 monthly_pay = (
     filtered.groupby("mes_str", as_index=False)
     .agg(
-        Efectivo=("venta_efectivo", "sum"),
-        MercadoPago=("venta_mercadopago", "sum"),
-        Transferencia=("venta_transferencia", "sum"),
+        Efectivo=("pagos_efectivo", "sum"),
+        MercadoPago=("pagos_mercadopago", "sum"),
+        Transferencia=("pagos_transferencia", "sum"),
     )
     .sort_values("mes_str")
 )
-pay_melted = monthly_pay.melt(id_vars="mes_str", var_name="Medio de Pago", value_name="Ventas")
-fig_pay = px.bar(pay_melted, x="mes_str", y="Ventas", color="Medio de Pago",
-                 barmode="stack", labels={"mes_str": "Mes", "Ventas": "Ventas ($)"},
+pay_melted = monthly_pay.melt(id_vars="mes_str", var_name="Medio de Pago", value_name="Pedidos")
+fig_pay = px.bar(pay_melted, x="mes_str", y="Pedidos", color="Medio de Pago",
+                 barmode="stack", labels={"mes_str": "Mes", "Pedidos": "Pedidos (Q)"},
                  color_discrete_sequence=COLORS)
-styled_fig(fig_pay, "Ventas por Medio de Pago")
-st.plotly_chart(fig_pay, use_container_width=True)
+styled_fig(fig_pay, "Pedidos por Medio de Pago")
+st.plotly_chart(fig_pay, width='stretch')
 
 st.divider()
 
@@ -145,7 +136,7 @@ with col1:
                      labels={"estacion": "", "pedidos": "Pedidos"})
         fig.update_layout(showlegend=False)
         styled_fig(fig, "Pedidos por Estacion")
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
 with col2:
     if "temporada" in filtered.columns:
@@ -161,4 +152,8 @@ with col2:
                      labels={"temporada": "", "pedidos": "Pedidos"})
         fig.update_layout(showlegend=False)
         styled_fig(fig, "Pedidos por Temporada")
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
+
+
+# -- AI Chat --
+ai_chat_section(filtered, "ventas", "Ventas diarias: pedidos, KG, ingresos ARS/USD, estacion, clima")

@@ -4,11 +4,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-from app import load_zonas
+from data import load_zonas
 from theme import apply_theme, styled_fig, COLORS, TEAL, DARK_BLUE
 from components import kpi_row, fmt_ars, fmt_usd, fmt_pct
+from ai_chat import ai_chat_section
 
-st.set_page_config(page_title="Zonas - Ainara", page_icon="\U0001f366", layout="wide")
 apply_theme()
 st.title("Zonas de Delivery")
 
@@ -42,7 +42,7 @@ fig_pedidos = px.bar(
 )
 fig_pedidos.update_layout(showlegend=False)
 styled_fig(fig_pedidos, "Pedidos por Zona")
-st.plotly_chart(fig_pedidos, use_container_width=True)
+st.plotly_chart(fig_pedidos, width='stretch')
 
 st.divider()
 
@@ -57,7 +57,7 @@ fig_ventas = px.bar(
 )
 fig_ventas.update_layout(showlegend=False)
 styled_fig(fig_ventas, "Ventas por Zona")
-st.plotly_chart(fig_ventas, use_container_width=True)
+st.plotly_chart(fig_ventas, width='stretch')
 
 st.divider()
 
@@ -74,7 +74,7 @@ available_cols = [c for c in metrics_cols if c in df.columns]
 
 st.dataframe(
     df[available_cols].sort_values("total_pedidos", ascending=False),
-    use_container_width=True,
+    width='stretch',
     hide_index=True,
 )
 
@@ -85,6 +85,10 @@ st.subheader("Tabla Completa de Zonas")
 
 st.dataframe(
     df.sort_values("total_pedidos", ascending=False),
-    use_container_width=True,
+    width='stretch',
     hide_index=True,
 )
+
+
+# -- AI Chat --
+ai_chat_section(df, "zonas", "Zonas de delivery: pedidos, clientes, venta, demora, distancia")

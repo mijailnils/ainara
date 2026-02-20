@@ -4,21 +4,23 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-from app import load_margenes
+from data import load_margenes
 from theme import apply_theme, styled_fig, COLORS, TEAL, DARK_BLUE
-from components import kpi_row, fmt_ars, fmt_usd, fmt_pct
+from components import kpi_row, fmt_ars, fmt_usd, fmt_pct, sidebar_date_slicer, filter_by_date
+from ai_chat import ai_chat_section
 
-st.set_page_config(page_title="Margenes - Ainara", page_icon="\U0001f366", layout="wide")
 apply_theme()
 st.title("Margenes")
 
-# ── Load data ─────────────────────────────────────────────────────────────────
+# ── Load & filter ─────────────────────────────────────────────────────────────
 df = load_margenes()
 df["mes"] = pd.to_datetime(df["mes"])
+start_date, end_date = sidebar_date_slicer("margenes")
+df = filter_by_date(df, "mes", start_date, end_date)
 
-# ── Filter: dimension_tipo ───────────────────────────────────────────────────
+# ── Sidebar: dimension filter ────────────────────────────────────────────────
 dim_options = sorted(df["dimension_tipo"].dropna().unique())
-sel_dim = st.selectbox(
+sel_dim = st.sidebar.selectbox(
     "Dimension",
     options=dim_options,
     index=dim_options.index("overall") if "overall" in dim_options else 0,
@@ -26,7 +28,6 @@ sel_dim = st.selectbox(
 
 filtered = df[df["dimension_tipo"] == sel_dim].copy()
 filtered = filtered.sort_values("mes")
-
 
 # ── KPIs ──────────────────────────────────────────────────────────────────────
 total_pedidos = int(filtered["pedidos"].sum()) if "pedidos" in filtered.columns else 0
@@ -56,21 +57,37 @@ fig_margin = px.line(
     color_discrete_sequence=COLORS,
 )
 styled_fig(fig_margin, "Margen % Mensual")
-st.plotly_chart(fig_margin, use_container_width=True)
+st.plotly_chart(fig_margin, width='stretch')
 
 st.divider()
 
-# ── Bar chart: contribucion_mg by month ──────────────────────────────────────
+# ── Bar chart: contribucion_mg by month (ARS / USD toggle) ──────────────────
 st.subheader("Contribucion Marginal por Mes")
 
-fig_contrib = px.bar(
-    filtered, x="mes", y="contribucion_mg",
-    color=color_col,
-    labels={"mes": "Mes", "contribucion_mg": "Contribucion MG ($)", "dimension_valor": "Dimension"},
-    color_discrete_sequence=COLORS,
-)
-styled_fig(fig_contrib, "Contribucion Marginal Mensual")
-st.plotly_chart(fig_contrib, use_container_width=True)
+tab_ars, tab_usd = st.tabs(["$ ARS", "U$D"])
+
+with tab_ars:
+    fig_contrib = px.bar(
+        filtered, x="mes", y="contribucion_mg",
+        color=color_col,
+        labels={"mes": "Mes", "contribucion_mg": "Contribucion MG ($)", "dimension_valor": "Dimension"},
+        color_discrete_sequence=COLORS,
+    )
+    styled_fig(fig_contrib, "Contribucion Marginal (ARS)")
+    st.plotly_chart(fig_contrib, width='stretch')
+
+with tab_usd:
+    if "contribucion_mg_usd" in filtered.columns:
+        fig_contrib_usd = px.bar(
+            filtered, x="mes", y="contribucion_mg_usd",
+            color=color_col,
+            labels={"mes": "Mes", "contribucion_mg_usd": "Contribucion MG (USD)", "dimension_valor": "Dimension"},
+            color_discrete_sequence=COLORS,
+        )
+        styled_fig(fig_contrib_usd, "Contribucion Marginal (USD)")
+        st.plotly_chart(fig_contrib_usd, width='stretch')
+    else:
+        st.info("No hay datos en USD disponibles.")
 
 st.divider()
 
@@ -86,6 +103,10 @@ available_cols = [c for c in display_cols if c in filtered.columns]
 
 st.dataframe(
     filtered[available_cols].sort_values("mes", ascending=False),
-    use_container_width=True,
+    width='stretch',
     hide_index=True,
 )
+
+
+# -- AI Chat --
+ai_chat_section(filtered, "margenes", "Margenes mensuales: overall, por tipo retiro, por tipo pago ARS/USD")

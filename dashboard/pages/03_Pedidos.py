@@ -4,11 +4,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-from app import load_pedidos
+from data import load_pedidos
 from theme import apply_theme, styled_fig, COLORS, TEAL, DARK_BLUE
-from components import kpi_row, fmt_ars, fmt_usd, fmt_pct
+from components import kpi_row, fmt_ars, fmt_usd, fmt_pct, sidebar_date_slicer, filter_by_date
+from ai_chat import ai_chat_section
 
-st.set_page_config(page_title="Pedidos - Ainara", page_icon="\U0001f366", layout="wide")
 apply_theme()
 st.title("Explorador de Pedidos")
 
@@ -16,14 +16,9 @@ st.title("Explorador de Pedidos")
 df = load_pedidos()
 df["fecha"] = pd.to_datetime(df["fecha"])
 
-# ── Filters ───────────────────────────────────────────────────────────────────
-st.sidebar.header("Filtros")
-
-min_date = df["fecha"].min().date()
-max_date = df["fecha"].max().date()
-
-start_date = st.sidebar.date_input("Desde", value=min_date, min_value=min_date, max_value=max_date)
-end_date = st.sidebar.date_input("Hasta", value=max_date, min_value=min_date, max_value=max_date)
+# ── Sidebar filters ──────────────────────────────────────────────────────────
+start_date, end_date = sidebar_date_slicer("pedidos")
+df = filter_by_date(df, "fecha", start_date, end_date)
 
 tipo_retiro_opts = sorted(df["tipo_retiro"].dropna().unique())
 tipo_retiro = st.sidebar.multiselect("Tipo de retiro", tipo_retiro_opts, default=tipo_retiro_opts)
@@ -35,11 +30,9 @@ estado_opts = sorted(df["estado_nombre"].dropna().unique())
 estados = st.sidebar.multiselect("Estado", estado_opts, default=estado_opts)
 
 mask = (
-    (df["fecha"].dt.date >= start_date)
-    & (df["fecha"].dt.date <= end_date)
-    & (df["tipo_retiro"].isin(tipo_retiro))
-    & (df["tipo_pago"].isin(tipo_pago))
-    & (df["estado_nombre"].isin(estados))
+    df["tipo_retiro"].isin(tipo_retiro)
+    & df["tipo_pago"].isin(tipo_pago)
+    & df["estado_nombre"].isin(estados)
 )
 filtered = df[mask].copy()
 
@@ -70,7 +63,7 @@ fig_hour = px.bar(
     color_discrete_sequence=[TEAL],
 )
 styled_fig(fig_hour, "Distribucion por Hora")
-st.plotly_chart(fig_hour, use_container_width=True)
+st.plotly_chart(fig_hour, width='stretch')
 
 st.divider()
 
@@ -93,7 +86,7 @@ if "horario" in filtered.columns:
     )
     fig_horario.update_layout(showlegend=False)
     styled_fig(fig_horario, "Pedidos por Franja Horaria")
-    st.plotly_chart(fig_horario, use_container_width=True)
+    st.plotly_chart(fig_horario, width='stretch')
 
 st.divider()
 
@@ -109,6 +102,10 @@ available_cols = [c for c in show_cols if c in filtered.columns]
 
 st.dataframe(
     filtered[available_cols].sort_values("fecha", ascending=False),
-    use_container_width=True,
+    width='stretch',
     hide_index=True,
 )
+
+
+# -- AI Chat --
+ai_chat_section(df, "pedidos", "Pedidos individuales: total, kg, tipo retiro, tipo pago, margen")

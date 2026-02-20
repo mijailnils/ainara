@@ -4,11 +4,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-from app import load_sabores
+from data import load_sabores
 from theme import apply_theme, styled_fig, COLORS, TEAL, DARK_BLUE
 from components import kpi_row, fmt_ars, fmt_usd, fmt_pct
+from ai_chat import ai_chat_section
 
-st.set_page_config(page_title="Sabores - Ainara", page_icon="\U0001f366", layout="wide")
 apply_theme()
 st.title("Sabores")
 
@@ -31,46 +31,58 @@ elif sin_azucar_opt == "Solo con azucar":
 total_sabores = len(filtered)
 total_q = int(filtered["veces_pedido"].sum())
 total_kg = filtered["kg_vendidos"].sum() if "kg_vendidos" in filtered.columns else 0
+total_margen_usd = filtered["margen_total_usd"].sum() if "margen_total_usd" in filtered.columns else 0
 
 kpi_row([
     ("Sabores", f"{total_sabores:,}"),
     ("Veces Pedido (Q)", f"{total_q:,}"),
     ("KG Vendidos", f"{total_kg:,.0f}"),
+    ("Margen Total (USD)", fmt_usd(total_margen_usd)),
 ])
 
 st.divider()
 
-# ── Horizontal bar: veces_pedido top 20 ──────────────────────────────────────
-st.subheader("Top 20 Sabores por Popularidad")
+# ── Metric selector ──────────────────────────────────────────────────────────
+metric_opts = {
+    "Popularidad (Q)": "veces_pedido",
+    "KG Vendidos": "kg_vendidos",
+    "Margen Total (USD)": "margen_total_usd",
+    "Margen/KG (USD)": "margen_estimado_por_kg_usd",
+}
+available_metrics = {k: v for k, v in metric_opts.items() if v in filtered.columns}
+sel_metric = st.radio("Metrica", list(available_metrics.keys()), horizontal=True)
+y_col = available_metrics[sel_metric]
 
-top20_pop = filtered.nlargest(20, "veces_pedido").sort_values("veces_pedido")
+# ── Horizontal bar: top 20 ────────────────────────────────────────────────────
+st.subheader(f"Top 20 Sabores por {sel_metric}")
 
-fig_pop = px.bar(
-    top20_pop, x="veces_pedido", y="sabor", orientation="h",
+top20 = filtered.nlargest(20, y_col).sort_values(y_col)
+
+fig = px.bar(
+    top20, x=y_col, y="sabor", orientation="h",
     color="categoria",
-    labels={"veces_pedido": "Veces Pedido", "sabor": "Sabor", "categoria": "Categoria"},
+    labels={y_col: sel_metric, "sabor": "Sabor", "categoria": "Categoria"},
     color_discrete_sequence=COLORS,
 )
-styled_fig(fig_pop, "Top 20 Sabores por Popularidad")
-fig_pop.update_layout(height=600)
-st.plotly_chart(fig_pop, use_container_width=True)
+styled_fig(fig, f"Top 20 por {sel_metric}")
+fig.update_layout(height=600)
+st.plotly_chart(fig, width='stretch')
 
 st.divider()
 
-# ── Horizontal bar: kg_vendidos top 20 ───────────────────────────────────────
-st.subheader("Top 20 Sabores por KG Vendidos")
-
-top20_kg = filtered.nlargest(20, "kg_vendidos").sort_values("kg_vendidos")
-
-fig_kg = px.bar(
-    top20_kg, x="kg_vendidos", y="sabor", orientation="h",
-    color="categoria",
-    labels={"kg_vendidos": "KG Vendidos", "sabor": "Sabor", "categoria": "Categoria"},
-    color_discrete_sequence=COLORS,
-)
-styled_fig(fig_kg, "Top 20 Sabores por KG")
-fig_kg.update_layout(height=600)
-st.plotly_chart(fig_kg, use_container_width=True)
+# ── Margen por KG: scatter ───────────────────────────────────────────────────
+if "margen_estimado_por_kg_usd" in filtered.columns and "kg_vendidos" in filtered.columns:
+    st.subheader("Margen/KG vs KG Vendidos")
+    top50 = filtered.nlargest(50, "kg_vendidos")
+    fig_scatter = px.scatter(
+        top50, x="kg_vendidos", y="margen_estimado_por_kg_usd",
+        size="veces_pedido", color="categoria",
+        hover_name="sabor",
+        labels={"kg_vendidos": "KG Vendidos", "margen_estimado_por_kg_usd": "Margen/KG (USD)", "categoria": "Categoria"},
+        color_discrete_sequence=COLORS,
+    )
+    styled_fig(fig_scatter, "Margen por KG vs Volumen")
+    st.plotly_chart(fig_scatter, width='stretch')
 
 st.divider()
 
@@ -97,7 +109,7 @@ if available_season:
     )
     styled_fig(fig_heat, "Estacionalidad (%)")
     fig_heat.update_layout(height=500)
-    st.plotly_chart(fig_heat, use_container_width=True)
+    st.plotly_chart(fig_heat, width='stretch')
 
 st.divider()
 
@@ -106,13 +118,18 @@ st.subheader("Tabla de Sabores")
 
 display_cols = [
     "ranking", "sabor", "categoria", "is_sin_azucar",
-    "veces_pedido", "pedidos_distintos", "kg_vendidos",
-    "porcentaje_del_total", "estacion_top",
+    "veces_pedido", "kg_vendidos", "costo_promedio_kg",
+    "margen_estimado_por_kg", "margen_estimado_por_kg_usd",
+    "margen_total_usd", "porcentaje_del_total", "estacion_top",
 ]
 available_cols = [c for c in display_cols if c in filtered.columns]
 
 st.dataframe(
     filtered[available_cols].sort_values("ranking"),
-    use_container_width=True,
+    width='stretch',
     hide_index=True,
 )
+
+
+# -- AI Chat --
+ai_chat_section(filtered, "sabores", "Sabores de helado: popularidad, KG, margen USD, estacionalidad")

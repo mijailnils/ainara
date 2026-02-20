@@ -121,5 +121,5 @@ select
     dm.tipo_cambio_promedio
 
 from unioned u
-left join dolar_mensual dm on u.mes = dm.mes
+left join dolar_mensual dm on u.mes::date = dm.mes
 order by u.mes desc, u.dimension_tipo, u.dimension_valor
